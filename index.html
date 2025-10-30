@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Image Uploader</title>
+    <style>
+        /* ... (keep the same CSS styles) ... */
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <div class="logo">CF</div>
+        <h1>Cloudflare Image Uploader</h1>
+        <p class="subtitle">Upload your images to Cloudflare's global CDN</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>Drag & Drop your image here</h3>
+            <p>or <span class="browse-text">browse files</span></p>
+            <p class="supported-formats">Supports: JPG, PNG, GIF, WebP (Max 10MB)</p>
+        </div>
+        
+        <input type="file" id="fileInput" class="file-input" accept="image/*">
+        
+        <div class="preview-container" id="previewContainer">
+            <img id="imagePreview" class="image-preview" alt="Image preview">
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress" id="progress"></div>
+        </div>
+        
+        <button class="upload-btn" id="uploadBtn" disabled>Upload to Cloudflare</button>
+        
+        <div class="result-container" id="resultContainer">
+            <div class="success-message">✅ Image uploaded successfully!</div>
+            <p><strong>Image URL:</strong></p>
+            <div class="image-url" id="imageUrl">https://...</div>
+            <button class="copy-btn" onclick="copyToClipboard()">Copy URL</button>
+            <button class="new-upload" onclick="resetUploader()">Upload New Image</button>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="config-section" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 10px;">
+            <h4>Configuration</h4>
+            <div style="text-align: left; font-size: 14px;">
+                <p><strong>Backend URL:</strong> <input type="text" id="backendUrl" value="http://localhost:3001/upload" style="width: 100%; padding: 5px; margin: 5px 0;"></p>
+                <p style="color: #666; font-size: 12px;">Set to your backend endpoint or use CORS proxy</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progress = document.getElementById('progress');
+        const resultContainer = document.getElementById('resultContainer');
+        const imageUrl = document.getElementById('imageUrl');
+        const errorMessage = document.getElementById('errorMessage');
+        const backendUrlInput = document.getElementById('backendUrl');
+
+        // Event Listeners
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadBtn.addEventListener('click', uploadToCloudflare);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please select a valid image file.');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showError('Image size must be less than 10MB.');
+                return;
+            }
+
+            hideError();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                previewContainer.style.display = 'block';
+                uploadBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadToCloudflare() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            progressBar.style.display = 'block';
+            progress.style.width = '30%';
+
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                // Use configured backend URL
+                const backendUrl = backendUrlInput.value;
+                
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progress.style.width = '100%';
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    imageUrl.textContent = data.imageUrl;
+                    resultContainer.style.display = 'block';
+                    uploadArea.style.display = 'none';
+                    previewContainer.style.display = 'none';
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+            } catch (error) {
+                showError(`Upload failed: ${error.message}`);
+                console.error('Upload error:', error);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload to Cloudflare';
+                progressBar.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const url = imageUrl.textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const copyBtn = document.querySelector('.copy-btn');
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy URL';
+                }, 2000);
+            });
+        }
+
+        function resetUploader() {
+            fileInput.value = '';
+            previewContainer.style.display = 'none';
+            resultContainer.style.display = 'none';
+            uploadArea.style.display = 'block';
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Upload to Cloudflare';
+            hideError();
+        }
+    </script>
+</body>
+</html>
