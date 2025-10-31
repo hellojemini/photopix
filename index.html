@@ -1,179 +1,376 @@
+
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Product Card</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Delius&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="name">
-      <h1>Product Showcase</h1>
-      <p>Explore our amazing products!</p>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEMINI APP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            background: #000;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #video-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+            z-index: 2;
+        }
+
+        .loader-container {
+            position: absolute;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 10;
+            background: rgba(10, 10, 20, 0.95);
+            transition: opacity 0.5s ease;
+        }
+
+        .loader {
+            width: 80px; height: 80px; position: relative;
+        }
+
+        .loader-inner {
+            position: absolute; width: 100%; height: 100%;
+            border: 4px solid transparent;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite;
+        }
+        .loader-inner:nth-child(2) {
+            border-bottom: 4px solid #e74c3c;
+            animation: spinReverse 1.5s linear infinite;
+        }
+        .loader-inner:nth-child(3) {
+            width: 60px; height: 60px; top: 10px; left: 10px;
+            border-left: 4px solid #2ecc71;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+        @keyframes spinReverse { from{transform:rotate(0)} to{transform:rotate(-360deg)} }
+
+        .loader-text {
+            margin-top: 20px;
+            color: #ecf0f1;
+            font-size: 1rem;
+            letter-spacing: 2px;
+        }
+
+        .loading-progress {
+            width: 200px; height: 4px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 15px; border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            transition: width 0.3s ease;
+        }
+
+        .status {
+            position: absolute;
+            bottom: 2rem; left: 50%;
+            transform: translateX(-50%);
+            color: #fff; font-size: 0.9rem;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 18px;
+            border-radius: 28px;
+            display: flex; align-items: center; gap: 8px;
+            z-index: 5;
+        }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #2ecc71;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%{transform:scale(1);opacity:1}
+            50%{transform:scale(1.2);opacity:.7}
+            100%{transform:scale(1);opacity:1}
+        }
+
+        .mute-toggle {
+            position: absolute;
+            bottom: 2rem; right: 1.5rem;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 10;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .mute-toggle svg { width: 24px; height: 24px; fill: white }
+        .mute-toggle:hover { background: rgba(0,0,0,0.7) }
+
+        .mute-toggle.unmuted .mute-icon,
+        .mute-toggle.muted .unmute-icon { display: block }
+        .mute-toggle.unmuted .unmute-icon,
+        .mute-toggle.muted .mute-icon { display: none }
+
+        .mute-tooltip {
+            position: absolute;
+            bottom: 110%; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white; padding: 4px 10px;
+            border-radius: 4px; font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0; transition: 0.3s;
+        }
+        .mute-toggle:hover .mute-tooltip { opacity: 1 }
+
+        /* Centered Play Button Styles */
+        .play-button-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .play-button-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .play-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .play-button svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+            margin-left: 4px;
+        }
+
+        .play-text {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            opacity: 0.9;
+        }
+
+        .video-title {
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 5;
+            text-align: center;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .loader { width: 60px; height: 60px; }
+            .loader-inner:nth-child(3) { width: 40px; height: 40px; }
+            .loader-text { font-size: 0.85rem; }
+            .loading-progress { width: 150px; }
+            .mute-toggle { width: 40px; height: 40px; bottom: 1rem; right: 1rem; }
+            .mute-toggle svg { width: 20px; height: 20px; }
+            .status { font-size: 0.75rem; padding: 6px 14px; bottom: 1rem; }
+            .play-button { width: 70px; height: 70px; }
+            .play-button svg { width: 25px; height: 25px; }
+            .play-text { font-size: 1rem; }
+            .video-title { font-size: 1.5rem; top: 1.5rem; }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .loader { width: 70px; height: 70px; }
+            .loading-progress { width: 180px; }
+        }
+        @media (orientation: portrait) {
+            #video-bg { width: auto; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="loader-container" id="loader">
+            <div class="loader">
+                <div class="loader-inner"></div>
+                <div class="loader-inner"></div>
+                <div class="loader-inner"></div>
+            </div>
+            <p class="loader-text">Loading Video</p>
+            <div class="loading-progress"><div class="progress-bar" id="progress-bar"></div></div>
+        </div>
+
+        <video id="video-bg" muted loop playsinline>
+            <source src="https://video.twimg.com/amplify_video/1983640088656670722/vid/avc1/612x1280/IagkT6gdO--Wr33E.mp4?tag=14" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+
+        <div class="overlay"></div>
+
+        <h1 class="video-title"></h1>
+
+        <div class="play-button-container" id="play-button-container">
+            <div class="play-button" id="play-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+            <div class="play-text">PLAY VIDEO</div>
+        </div>
+
+        <div class="status"><span class="status-dot"></span> Video Paused</div>
+
+        <div class="mute-toggle muted" id="mute-toggle">
+            <svg class="mute-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+            <svg class="unmute-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <span class="mute-tooltip">Mute/Unmute</span>
+        </div>
     </div>
-    <div class="main">
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Nike Shoes</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Minima voluptatum obcaecati iure dolorem quidem error.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
 
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=2072&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Flower Pot</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Nesciunt totam non perferendis saepe iusto voluptatum.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('video-bg');
+    const loader = document.getElementById('loader');
+    const progressBar = document.getElementById('progress-bar');
+    const muteToggle = document.getElementById('mute-toggle');
+    const playButton = document.getElementById('play-button');
+    const playButtonContainer = document.getElementById('play-button-container');
+    const playText = document.querySelector('.play-text');
+    const status = document.querySelector('.status');
+    
+    // Simulate loading progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if(progress >= 100){ 
+            progress = 100; 
+            clearInterval(interval); 
+        }
+        progressBar.style.width = progress + "%";
+    }, 200);
 
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Apple Watch</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Placeat commodi nulla quis corrupti, a natus.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
+    // When video is ready to play
+    video.addEventListener('canplaythrough', () => {
+        setTimeout(() => { 
+            loader.style.opacity = '0'; 
+            setTimeout(() => loader.style.display = 'none', 500);
+        }, 500);
+    });
+    
+    // Mute/Unmute functionality
+    muteToggle.addEventListener('click', () => {
+        video.muted = !video.muted;
+        muteToggle.classList.toggle('muted', video.muted);
+        muteToggle.classList.toggle('unmuted', !video.muted);
+    });
 
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1549206464-82c129240d11?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Headphones</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit amet adipisicing elit. Ratione alias assumenda, laborum at consequuntur hic.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
+    // Play/Pause functionality
+    playButton.addEventListener('click', () => {
+        if (video.paused) {
+            video.play()
+                .then(() => {
+                    playText.textContent = 'PLAYING';
+                    status.innerHTML = '<span class="status-dot"></span> Video Playing';
+                    // Hide play button when video starts
+                    playButtonContainer.classList.add('hidden');
+                })
+                .catch(error => {
+                    console.error('Error playing video:', error);
+                    status.innerHTML = '<span class="status-dot"></span> Error playing video';
+                });
+        } else {
+            video.pause();
+            playText.textContent = 'PLAY VIDEO';
+            status.innerHTML = '<span class="status-dot"></span> Video Paused';
+            // Show play button when video is paused
+            playButtonContainer.classList.remove('hidden');
+        }
+    });
 
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=1780&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Women Shoes</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit, amet consectetur adipisicing elit. Suscipit nemo nobis ipsam amet assumenda doloremque.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1580870069867-74c57ee1bb07?q=80&w=1935&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Makeup kit</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Minima ducimus obcaecati optio, iusto totam laborum?
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1580566231970-2c91d3f49637?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Apple iphone 16</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Numquam molestiae modi omnis aliquam, doloribus eum.
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
-      <div class="product-card">
-        <div class="product-image">
-          <span class="product-badge">Sale</span>
-          <img
-            src="https://images.unsplash.com/photo-1624377225030-f0bb343eaa4d?q=80&w=2065&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Product Image"
-          />
-        </div>
-        <div class="product-details">
-          <h3 class="product-title">Premium Flower Spary</h3>
-          <div class="rating">★★★★★ (4.9)</div>
-          <p class="product-description">
-           Lorem, ipsum dolor sit amet consectetur adipisicing elit. Consequatur possimus ipsam, tempora minus natus nisi!
-          </p>
-          <div class="product-price">$299.99</div>
-          <a href="#" class="buy-button">Add to Cart</a>
-        </div>
-      </div>
-    </div>
+    // Update UI when video ends
+    video.addEventListener('ended', () => {
+        playText.textContent = 'PLAY AGAIN';
+        status.innerHTML = '<span class="status-dot"></span> Video Ended';
+        // Show play button when video ends
+        playButtonContainer.classList.remove('hidden');
+    });
 
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
-      integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script src="scrpit.js"></script>
-  </body>
+    // Handle video errors
+    video.addEventListener('error', () => {
+        status.innerHTML = '<span class="status-dot" style="background: #e74c3c"></span> Error loading video';
+    });
+
+    // Show play button when video is paused manually
+    video.addEventListener('pause', () => {
+        if (!video.ended) {
+            playText.textContent = 'PLAY VIDEO';
+            status.innerHTML = '<span class="status-dot"></span> Video Paused';
+            playButtonContainer.classList.remove('hidden');
+        }
+    });
+});
+</script>
+</body>
+
 </html>
+
